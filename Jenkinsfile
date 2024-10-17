@@ -1,4 +1,4 @@
-node('ubuntu-Appserver-CWEB2140')
+node('ubuntu-appserver-CWEB2140')
 {
  
 def app
