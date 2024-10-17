@@ -12,7 +12,7 @@ stage('Build-and-Tag')
 {
     /* This builds the actual image;
          * This is synonymous to docker build on the command line */
-    app = docker.build('spcasagrande/snake-games')
+    app = docker.build('spcasagrande/snake_games')
 }
  
 stage('Post-to-dockerhub')
