@@ -7,6 +7,11 @@ stage('Cloning Git')
     /* Let's make sure we have the repository cloned to our workspace */
     checkout scm
 }
+
+stage('Snyk-SAST-SCA-Test')
+{
+    echo "Snyk-SAST-SCA-Test"
+}
  
 stage('Build-and-Tag')
 {
