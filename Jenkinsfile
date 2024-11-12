@@ -1,52 +1,78 @@
-node('ubuntu-appserver-CWEB2140')
-{
+pipeline {
+    agent none
+    stages {
+        stage('CLONE GIT REPOSITORY') {
+            agent {
+                label 'ubuntu-appserver-CWEB2140'
+            }
+            steps {
+                checkout scm
+            }
+        }  
  
-def app
-stage('Cloning Git')
-{
-    /* Let's make sure we have the repository cloned to our workspace */
-    checkout scm
-}
-
-stage('Snyk-SAST-SCA-Test')
-{
-    steps {
-        script {
-            snykSecurity(
-                snykInstallation: 'Snyk',
-                snykTokenId: 'snyk_api_token',
-                severity: 'critical'
-            )
+        stage('SCA-SAST-SNYK-TEST') {
+            agent any
+            steps {
+                script {
+                    snykSecurity(
+                        snykInstallation: 'Snyk',
+                        snykTokenId: 'snyk_api_token',
+                        severity: 'critical'
+                    )
+                }
+            }
         }
-    }
-}
-
-stage('SonarQube Analysis') 
-{
-    steps {
-        script {
-            def scannerHome = tool 'SonarQube'
-            withSonarQubeEnv('SonarQube') {
-                sh "${scannerHome}/bin/sonar-scanner \
-                    -Dsonar.projectKey=gameapp \
-                    -Dsonar.sources=."
+ 
+        stage('SonarQube Analysis') {
+            agent {
+                label 'ubuntu-appserver-CWEB2140'
+            }
+            steps {
+                script {
+                    def scannerHome = tool 'SonarQube'
+                    withSonarQubeEnv('SonarQube') {
+                        sh "${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=gameapp \
+                            -Dsonar.sources=."
+                    }
+                }
+            }
+        }
+ 
+        stage('BUILD-AND-TAG') {
+            agent {
+                label 'ubuntu-appserver-CWEB2140'
+            }
+            steps {
+                script {
+                    def app = docker.build("spcasagrande/snake_games")
+                    app.tag("latest")
+                }
+            }
+        }
+ 
+        stage('POST-TO-DOCKERHUB') {    
+            agent {
+                label 'ubuntu-appserver-CWEB2140'
+            }
+            steps {
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub_credentials') {
+                        def app = docker.image("spcasagrande/snake_games")
+                        app.push("latest")
+                    }
+                }
+            }
+        }
+ 
+        stage('DEPLOYMENT') {    
+            agent {
+                label 'ubuntu-appserver-CWEB2140'
+            }
+            steps {
+                sh "docker-compose down"
+                sh "docker-compose up -d"   
             }
         }
     }
-}
- 
-stage('Build-and-Tag')
-{
-    /* This builds the actual image;
-         * This is synonymous to docker build on the command line */
-    app = docker.build('spcasagrande/snake_games')
-}
- 
-stage('Post-to-dockerhub')
-{
-    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub_credentials')
-    {
-        app.push('latest')
-    }
-   
 }
