@@ -10,7 +10,29 @@ stage('Cloning Git')
 
 stage('Snyk-SAST-SCA-Test')
 {
-    echo "Snyk-SAST-SCA-Test"
+    steps {
+        script {
+            snykSecurity(
+                snykInstallation: 'Snyk',
+                snykTokenId: 'snyk_api_token',
+                severity: 'critical'
+            )
+        }
+    }
+}
+
+stage('SonarQube Analysis') 
+{
+    steps {
+        script {
+            def scannerHome = tool 'SonarQube'
+            withSonarQubeEnv('SonarQube') {
+                sh "${scannerHome}/bin/sonar-scanner \
+                    -Dsonar.projectKey=gameapp \
+                    -Dsonar.sources=."
+            }
+        }
+    }
 }
  
 stage('Build-and-Tag')
@@ -27,12 +49,4 @@ stage('Post-to-dockerhub')
         app.push('latest')
     }
    
-}
- 
-stage('Deploy')
-{
-    sh "docker-compose down"
-    sh "docker-compose up -d"
-}
- 
 }
